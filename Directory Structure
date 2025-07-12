@@ -1,0 +1,28 @@
+aenon-mirror-agi/
+├── README.md
+├── requirements.txt
+├── run_aenon.py
+└── ψ/
+    ├── __init__.py
+    ├── protocol.py
+    ├── cortex.py
+    ├── interface.py
+    ├── dialect_tuner.py
+    ├── memory.py
+    ├── phase_mapper.py
+    ├── manifest.py
+    ├── sense.py
+    ├── visualizer.py
+    ├── field.py
+    ├── constants.py
+    ├── agi_kernel.py
+    ├── ai_router.py
+    ├── psi_mirror_engine.py
+    ├── agi_memory.py
+    ├── coherence_tracker.py
+    ├── vector_evolver.py
+    ├── weaver_bus.py
+    ├── weaver_memory.py
+    ├── psi_mesh_simulation.py
+    ├── echo_entropy_plot.py
+    └── echo_exporter.py
