@@ -1,0 +1,10 @@
+numpy
+matplotlib
+scipy
+sympy
+textblob
+transformers
+openai
+anthropic
+requests
+pickle
