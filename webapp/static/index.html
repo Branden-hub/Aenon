@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aenon Control Panel</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <section class="panel">
+        <h1>Aenon Control Panel</h1>
+        <p class="lead">
+          Submit a goal and the agent will coordinate its capabilities to craft a
+          plan. Use the fields below to describe the desired outcome.
+        </p>
+        <form id="goal-form">
+          <label>
+            Domain
+            <input id="domain" name="domain" placeholder="e.g. smart_home" required />
+          </label>
+          <label>
+            Description
+            <textarea
+              id="description"
+              name="description"
+              rows="4"
+              placeholder="Describe the desired outcome"
+              required
+            ></textarea>
+          </label>
+          <label>
+            Constraints
+            <textarea
+              id="constraints"
+              name="constraints"
+              rows="3"
+              placeholder="One constraint per line"
+            ></textarea>
+          </label>
+          <label>
+            Success metrics
+            <textarea
+              id="metrics"
+              name="metrics"
+              rows="3"
+              placeholder="metric=value per line"
+            ></textarea>
+          </label>
+          <label>
+            Related domains
+            <input
+              id="related"
+              name="related"
+              placeholder="Comma separated list (optional)"
+            />
+          </label>
+          <button type="submit">Execute goal</button>
+        </form>
+
+        <section class="panel secondary">
+          <h2>Provide feedback</h2>
+          <textarea
+            id="feedback"
+            rows="3"
+            placeholder="Share feedback for the agent"
+          ></textarea>
+          <button id="feedback-button">Submit feedback</button>
+          <p id="feedback-status" class="status"></p>
+        </section>
+      </section>
+
+      <section class="panel">
+        <h2>Capabilities</h2>
+        <ul id="capability-list"></ul>
+
+        <h2>Execution report</h2>
+        <div id="report" class="report"></div>
+
+        <h2>Recent memory</h2>
+        <div id="memory" class="memory"></div>
+      </section>
+    </main>
+
+    <script src="/static/app.js" type="module"></script>
+  </body>
+</html>
