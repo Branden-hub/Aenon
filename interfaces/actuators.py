@@ -1,24 +1,40 @@
-class ActuatorBase:
-    def __init__(self, config):
-        self.config = config
+"""Actuator definitions used by the Aenon agent."""
 
-    def execute(self, action: dict):
+from __future__ import annotations
+
+from typing import Any, Dict
+
+
+class ActuatorBase:
+    def __init__(self, config: Dict[str, Any] | None):
+        self.config = config or {}
+
+    def execute(self, action: Dict[str, Any]) -> Dict[str, Any]:
         raise NotImplementedError
 
+
 class IoTActuator(ActuatorBase):
-    def execute(self, action: dict):
-        # Example: {"device": "thermostat", "command": "set_temperature", "value": 72}
-        # We would use an IoT API to send the command
-        print(f"IoTActuator: Executing {action}")
+    """Simulate an IoT actuator."""
+
+    def execute(self, action: Dict[str, Any]) -> Dict[str, Any]:
+        message = f"IoTActuator executed action: {action}"
+        print(message)
+        return {"status": "simulated", "message": message}
+
 
 class RoboticActuator(ActuatorBase):
-    def execute(self, action: dict):
-        # Example: {"robot": "arm", "command": "grab", "position": [0.5, 0.2, 0.1]}
-        # We would use ROS or similar to send the command
-        print(f"RoboticActuator: Executing {action}")
+    """Simulate a robotic actuator."""
+
+    def execute(self, action: Dict[str, Any]) -> Dict[str, Any]:
+        message = f"RoboticActuator executed action: {action}"
+        print(message)
+        return {"status": "simulated", "message": message}
+
 
 class WebServiceActuator(ActuatorBase):
-    def execute(self, action: dict):
-        # Example: {"service": "calendar", "command": "create_event", "details": {...}}
-        # We would call a web API
-        print(f"WebServiceActuator: Executing {action}")
+    """Simulate calling a remote web service."""
+
+    def execute(self, action: Dict[str, Any]) -> Dict[str, Any]:
+        message = f"WebServiceActuator executed action: {action}"
+        print(message)
+        return {"status": "simulated", "message": message}

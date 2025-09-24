@@ -1,39 +1,67 @@
-from core.aenon import CapabilityBase
-from typing import Dict, Callable, Any
-import torch
+"""Self improvement capability for the Aenon agent."""
+
+from __future__ import annotations
+
+from typing import Any, Callable, Dict, List
+
+from core.aenon import CapabilityBase, CapabilityResponse, GoalDescriptor
+
 
 class SelfImprovement(CapabilityBase):
-    def __init__(self, config):
+    """Analyse the agent's tools and suggest refinements."""
+
+    def __init__(self, config: Dict | None):
         super().__init__(config)
-        # We'll keep a registry of algorithms that can be improved
-        self.registry = {}
+        self.registry: Dict[str, Dict[str, Any]] = {}
 
-    def register_algorithm(self, name: str, algorithm: torch.nn.Module, telemetry_fn: Callable[[], Dict]):
-        """Register an algorithm for self-improvement."""
-        self.registry[name] = {
-            'algorithm': algorithm,
-            'telemetry_fn': telemetry_fn
-        }
+    def register_algorithm(self, name: str, telemetry_fn: Callable[[], Dict[str, Any]]) -> None:
+        """Register an algorithm that can be introspected."""
 
-    def improve_algorithm(self, name: str):
-        """Improve the registered algorithm by name."""
-        if name not in self.registry:
-            raise ValueError(f"Algorithm {name} not registered.")
-        
-        algorithm = self.registry[name]['algorithm']
-        telemetry_fn = self.registry[name]['telemetry_fn']
-        telemetry = telemetry_fn()
-        
-        # Analyze the algorithm and telemetry to generate improvements
-        # This is a placeholder for the actual improvement process
-        # We might use symbolic regression, reinforcement learning, etc.
-        improved_algorithm = self._symbolic_regression(algorithm, telemetry)
-        
-        # Update the registry
-        self.registry[name]['algorithm'] = improved_algorithm
-        return improved_algorithm
+        self.registry[name] = {"telemetry_fn": telemetry_fn}
 
-    def _symbolic_regression(self, algorithm, telemetry):
-        # Placeholder: We would use a symbolic regression library to find better algorithms
-        # For now, we return the same algorithm
-        return algorithm
+    def applies(self, goal: GoalDescriptor) -> bool:
+        text = f"{goal.domain} {goal.description}".lower()
+        keywords = {"improve", "optimise", "optimize", "refine", "self"}
+        return any(keyword in text for keyword in keywords)
+
+    def execute(self, goal: GoalDescriptor) -> CapabilityResponse:
+        suggestions = self._build_suggestions(goal)
+        insights = self._collect_feedback()
+        summary = "Identified improvement opportunities for the agent's toolkit."
+
+        return CapabilityResponse(
+            capability="self_improvement",
+            summary=summary,
+            insights=insights,
+            data={"suggestions": suggestions},
+        )
+
+    # ------------------------------------------------------------------
+    def _collect_feedback(self) -> List[str]:
+        if not self.aenon or not self.aenon.memory:
+            return []
+        feedback_entries = self.aenon.memory.retrieve("feedback", n_results=5)
+        return [entry.get("content", {}).get("feedback", "") for entry in feedback_entries if entry.get("content")]
+
+    def _build_suggestions(self, goal: GoalDescriptor) -> List[Dict[str, Any]]:
+        suggestions: List[Dict[str, Any]] = []
+        for name, payload in self.registry.items():
+            telemetry_fn = payload.get("telemetry_fn")
+            telemetry = telemetry_fn() if telemetry_fn else {}
+            suggestions.append(
+                {
+                    "component": name,
+                    "action": "Tune hyper-parameters based on recent telemetry.",
+                    "telemetry": telemetry,
+                }
+            )
+
+        if not suggestions:
+            suggestions.append(
+                {
+                    "component": "core",
+                    "action": "Introduce periodic retrospectives to review failed goals.",
+                    "telemetry": {"goal_domain": goal.domain},
+                }
+            )
+        return suggestions
