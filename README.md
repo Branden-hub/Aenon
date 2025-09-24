@@ -21,3 +21,6 @@ run_aenon.py: This module provides a simple interface for interacting with Aenō
 Tutorials and Guides
 Submitting Requests: To submit a request to Aenōn, simply use the submit_request function in the run_aenon.py module.
 Integrating with Other Systems: To integrate Aenōn with other systems, use the APIs provided in the aenon-mirror-agi module.
+
+Blueprints
+Interactive, Evolving Space Interpreter: See [docs/space_interpreter_blueprint.md](docs/space_interpreter_blueprint.md) for a comprehensive architecture and delivery plan for building an automated, multimodal space intelligence platform.
