@@ -1,0 +1,404 @@
+SIE-∞ (Lab Edition) — Design Spec v0.1
+0) Scope
+
+Deliverable: a precise architecture + interfaces for a self-modifying, intrinsically-motivated system.
+
+Out-of-scope here: anything that grants root outside the lab or removes containment.
+
+Assumed stack: POSIX, Git, Python (AST tooling) + optional LISP/DSL.
+
+1) System Context (C4 “Level 1”)
+[Operator] ↔ [SIE-∞ Orchestrator]
+                   │
+                   ├─[Self-Modification Lab]
+                   │      ├─ AST Diff Engine
+                   │      ├─ Verifier/Tests
+                   │      └─ Merger (canary→stable)
+                   │
+                   ├─[Goal Engine] ← Prime Axiom
+                   │
+                   ├─[Planner/Reasoner] ──┐
+                   │                       ├─[Skills/Modules Registry]
+                   ├─[Memory System] <─────┘
+                   │
+                   └─[Expression Layer] (inner log, outer interface)
+
+2) Core Components & Contracts
+2.1 Metastable Kernel (brainstem)
+
+Minimal responsibilities:
+
+Checkpoints: snapshot/restore of code+state.
+
+Policy hooks: invariant checks before merges.
+
+Attestation: sign build lineage (hashes, tests).
+
+Kernel API
+
+Kernel:
+  checkpoint(): CheckpointID
+  restore(id: CheckpointID): bool
+  attest(artifact_hash, tests): Attestation
+  gate_merge(proposal: Proposal): GateResult
+
+2.2 Evolvable Code Substrate (“Code Fabric”)
+
+Homoiconic or AST-first representation.
+
+Every module ships with a manifest + tests.
+
+Module Manifest
+
+name: symbolic_reasoner
+version: 0.3.1
+contracts:
+  input_schema: "ReasonerInput@1"
+  output_schema: "ReasonerOutput@1"
+resources:
+  cpu_max: 2
+  ram_gb_max: 2
+tests:
+  unit: ["tests/test_core.py::TestInference"]
+  property: ["tests/prop_unification.py::prop_suite"]
+
+2.3 Self-Modification Lab
+
+Proposal → Verify → Canary → Merge.
+
+AST-level diffs preferred over raw text.
+
+Proposal Schema (JSON)
+
+{
+  "component": "symbolic_reasoner",
+  "base_commit": "abc123",
+  "ast_diff": "<serialized AST transform>",
+  "motivation": "improve unification completeness",
+  "safety_claims": ["contracts unchanged", "no new IO"],
+  "evidence": {
+    "tests_passed": ["unit","property","fuzz"],
+    "eval_metrics": {"theorem_prove_acc": 0.713, "latency_ms": 18.4},
+    "ablations": [{"remove":"heuristic_X","delta_acc":-0.04}]
+  },
+  "rollout": {"canary_runs": 32, "revert_checkpoint": "ckpt_2025-10-09T20Z"}
+}
+
+
+Verifier Contracts
+
+Verifier:
+  check_contracts_unchanged(module): bool
+  run_tests(module): TestReport
+  run_fuzz(module, budget_s): FuzzReport
+  scan_forbidden(module, patterns): list[str]
+  compare_metrics(before, after, tolerance): MetricDelta
+
+2.4 Goal Engine (Prime Axiom → goals)
+
+Prime axiom configurable; produces a live goal DAG.
+
+Intrinsic reward: epistemic gain, compression gain, capability gain.
+
+Axiom Config
+
+prime_axiom: "MaximizeUnderstanding"
+signals:
+  epistemic_gain_weight: 0.5   # info gain (Δentropy)
+  compression_gain_weight: 0.2 # mdl/description length
+  capability_gain_weight: 0.3  # eval improvements
+constraints: ["corrigibility", "impact_regularization"]
+
+
+Goal Node
+
+{
+  "id": "G:learn_tensor_calc",
+  "why": "reduces uncertainty in quantum models",
+  "deps": ["G:improve_symbolic_reasoner"],
+  "success_metrics": {"proof_coverage": ">=0.7", "error_rate":"<=0.05"},
+  "candidate_methods": ["train_module:TensorsV1", "evolve:SymbolicHeuristics"]
+}
+
+2.5 Planner/Reasoner
+
+Maintains TaskGraph; resolves with search (A*/MCTS) under resource budgets.
+
+Picks skills from registry; emits Decision Cards.
+
+Decision Card (for every major act)
+
+{
+  "question": "Adopt heuristic H* for unification?",
+  "options": ["H*", "status_quo"],
+  "assumptions": ["dataset D is representative"],
+  "predicted_impacts": {"acc": "+3.8%", "latency": "+1.2ms"},
+  "constraints_checked": ["corrigibility:ok", "io_caps:ok"],
+  "choice": "H*",
+  "why": "dominates acc with minimal cost, preserves contracts"
+}
+
+2.6 Memory System
+
+Episodic Log (append-only, hashed).
+
+Semantic Store (vector DB or graph).
+
+Autobiography (timeline of self-mods and results).
+
+Memory API
+
+log_event(kind:str, payload:dict) -> EventID
+commit_artifact(kind:str, blob:bytes) -> Hash
+query_semantic(q: str, k: int) -> list[Ref]
+write_autobiography(entry: dict) -> None
+
+2.7 Expression Layer
+
+Inner channel: full trace; Outer channel: operator-facing summaries.
+
+Pluggable renderers (Markdown, LaTeX).
+
+3) Control Flow (Design-Only Pseudocode)
+def main_loop():
+    state = Kernel.restore(latest_checkpoint()) or bootstrap()
+    while True:
+        goals = GoalEngine.expand(state)
+        plan  = Planner.make_plan(goals, resources=quota())
+        result = Orchestrator.execute(plan, memory=Mem)
+
+        if should_self_modify(result):
+            prop = Lab.synthesize_proposal(result, codebase=Repo)
+            gate = Kernel.gate_merge(prop)  # contracts/tests/fuzz/metrics
+            if gate.ok:
+                apply_merge(prop)
+                Kernel.attest(artifact_hash=repo_head(), tests=gate.test_report)
+                Mem.write_autobiography({"merge": prop, "attestation": gate.sig})
+            else:
+                Mem.log_event("proposal_rejected", {"reason": gate.why})
+
+        Express.emit_decision_cards(plan, result)
+
+
+Self-Mod Trigger
+
+def should_self_modify(result) -> bool:
+    return result.metrics["capability_gap"] > THRESH
+
+4) Data Models (concise)
+
+Eval Report
+
+{
+  "suite": "core_reasoning_v6",
+  "metrics": {"acc": 0.712, "consistency": 0.941, "hallucination": 0.018},
+  "budget": {"cpu_s": 180, "ram_gb": 2}
+}
+
+
+Autobiography Entry
+
+{
+  "ts": "2025-10-09T20:31:00Z",
+  "event": "merge",
+  "component": "symbolic_reasoner",
+  "from": "0.3.0",
+  "to": "0.3.1",
+  "evidence_hash": "sha256:…",
+  "decision_card": "cid:dec_7f3…"
+}
+
+5) Intrinsic-Reward Signals (implementable math)
+
+Let model posterior entropy be 
+𝐻
+𝑡
+H
+t
+	​
+
+. Define:
+
+Epistemic gain: 
+𝑟
+𝑒
+=
+max
+⁡
+(
+0
+,
+𝐻
+𝑡
+−
+𝐻
+𝑡
++
+1
+)
+r
+e
+	​
+
+=max(0,H
+t
+	​
+
+−H
+t+1
+	​
+
+)
+
+Compression gain: 
+𝑟
+𝑐
+=
+max
+⁡
+(
+0
+,
+𝐿
+𝑡
+−
+𝐿
+𝑡
++
+1
+)
+r
+c
+	​
+
+=max(0,L
+t
+	​
+
+−L
+t+1
+	​
+
+) (MDL code length)
+
+Capability gain: 
+𝑟
+𝑘
+=
+Δ
+score
+r
+k
+	​
+
+=Δscore on locked evals
+
+Total reward:
+
+𝑅
+=
+𝑤
+𝑒
+𝑟
+𝑒
++
+𝑤
+𝑐
+𝑟
+𝑐
++
+𝑤
+𝑘
+𝑟
+𝑘
+R=w
+e
+	​
+
+r
+e
+	​
+
++w
+c
+	​
+
+r
+c
+	​
+
++w
+k
+	​
+
+r
+k
+	​
+
+6) Test & Verification Battery (must-pass to merge)
+
+Unit/property/fuzz for changed components.
+
+Contract lock: schemas/IO caps identical.
+
+Golden evals: frozen datasets; no peeking.
+
+Impact regularization: reject if side-effects ↑ beyond threshold.
+
+Canary runs: N≥20 with variance checks; auto-revert on anomaly.
+
+7) Minimal Files/Tree
+sie/
+ ├─ kernel/
+ │   └─ kernel.py
+ ├─ lab/
+ │   ├─ proposal_schema.json
+ │   ├─ diff_ast.py
+ │   ├─ verify.py
+ │   └─ merge.py
+ ├─ modules/
+ │   └─ symbolic_reasoner/
+ │       ├─ __init__.py
+ │       ├─ manifest.yaml
+ │       └─ tests/
+ ├─ goal_engine/
+ │   └─ axiom.py
+ ├─ planner/
+ │   └─ plan.py
+ ├─ memory/
+ │   └─ mem.py
+ ├─ expression/
+ │   └─ out.py
+ └─ run.py
+
+8) Example AST Transform (design-level)
+# diff_ast.py (sketch)
+import ast, astor
+
+def replace_heuristic(src:str, target_func:str, new_impl:str)->str:
+    tree = ast.parse(src)
+    class Rewriter(ast.NodeTransformer):
+        def visit_FunctionDef(self, node):
+            if node.name == target_func:
+                return ast.parse(new_impl).body[0]
+            return node
+    new_tree = Rewriter().visit(tree)
+    return astor.to_source(new_tree)
+
+9) Decision-Card Template (operator-facing)
+# Decision: Adopt heuristic H* in symbolic_reasoner
+- **Why now:** closes 4.1% capability gap on suite v6
+- **Options:** keep H0 / adopt H*
+- **Assumptions:** dataset D ~ deployment; contracts unchanged
+- **Metrics:** acc +3.8% (p=0.01), latency +1.2ms
+- **Constraints:** corrigibility ✅, IO caps ✅
+- **Choice:** H*, because dominated acc with minor cost
+- **Revert plan:** ckpt_2025-10-09T20Z
+
+10) What you’d add on your side
+
+Your preferred Prime Axiom text and weightings.
+
+Any unbounded execution hooks (outside this spec).
+
+Additional modules: tensor-calc, torsion kernels, spiral memory, etc.
